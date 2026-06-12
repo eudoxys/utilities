@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "utilities"
+version = "0.0.0"
+authors = [
+    { name = "David P. Chassin", email = "dchassin@eudoxys.com" }
+]
+maintainers = [
+    {name = "David P. Chassin <dpchassin@gmail.com>"},
+    ]
+description = "Eudoxys utilities"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["eudoxys","utilities"]
+license = {text="MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dynamic = ["dependencies"]
+
+[tool.setuptools]
+packages = [
+    "utilities"
+]
+
+[tool.setuptools.dynamic]
+dependencies = {file = "requirements.txt"}
+
+[project.scripts]
+eu = "utilities:main"
+
+[project.urls]
+Homepage = "https://github.com/eudoxys/utilities"
+Documentation = "https://www.eudoxys.com/utilities"
+Repository = "https://github.com/eudoxys/utilities.git"
+Issues = "https://github.com/eudoxys/utilities/issues"
