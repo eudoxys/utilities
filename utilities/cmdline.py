@@ -1,4 +1,32 @@
-"""Command line utilities"""
+"""Command line utilities
+
+The command line parsers splits and parses the command line according to the
+format of the values found as follows.
+
+- `CommandLine.args` have no leading dash or equal sign embedded.
+
+- `CommandLine.kwargs` have a leading double dash. If an equal sign is embedded the
+  item of kwargs is set to the value that follows the equal sign.
+  Otherwise, the item is set to `True`.
+
+- `CommandLine.flags` have a single dash. The list entry is the value following the
+  dash.
+
+- `CommandLine.values` have an equal sign embedded with no leading dash. The key is
+  the portion before the equal sign and value is everything after the
+  equal sign.
+
+Values are automatically converted to python values as follows.
+
+1. Basic values, i.e., `None`, `bool, `int`, `float` as interpreted by the
+JSON loader. Values in double-quotes are interpreted as `str`.
+
+2. Dictionaries, i.e., `key:value` comma-separated strings.
+
+3. Lists, i.e., comma-separated values.
+
+4. String, everything else is simply interpreted as a string.
+"""
 
 import sys
 import json
@@ -30,34 +58,7 @@ def _autocast(x):
     raise ValueError(f"unable to autocast {x=}")
 
 def _getargs(argv):
-    """Get args, kwargs, flags, and values from argument list
-
-    Extracts the various parts of the command line as follows.
-
-    - `args` have no leading dash or equal sign embedded.
-
-    - `kwargs` have a leading double dash. If an equal sign is embedded the
-      item of kwargs is set to the value that follows the equal sign.
-      Otherwise, the item is set to `True`.
-
-    - `flags` have a single dash. The list entry is the value following the
-      dash.
-
-    - `values` have an equal sign embedded with no leading dash. The key is
-      the portion before the equal sign and value is everything after the
-      equal sign.
-
-    Values are automatically converted to python values as follows.
-
-    1. Basic values, i.e., `None`, `bool, `int`, `float` as interpreted by the
-    JSON loader. Values in double-quotes are interpreted as `str`.
-
-    2. Dictionaries, i.e., `key:value` comma-separated strings.
-
-    3. Lists, i.e., comma-separated values.
-
-    4. String, everything else is simply interpreted as a string.
-    """
+    """Get args, kwargs, flags, and values from argument list"""
 
     # convert position arguments (not starting with a dash)
     args = tuple(_autocast(x) for x in argv if x[0] != "-" and "=" not in x)
@@ -83,17 +84,47 @@ def _getargs(argv):
 
 class CommandLine:
     """Command line parser"""
-    def __init__(self,argv=sys.argv):
-        """Construct command line parser and parse arguments"""
+    def __init__(self,
+        argv:list[str]|None=None,
+        nocommand:bool=False,
+        ):
+        """Construct command line parser and parse arguments
+
+        Arguments
+        ---------
+
+        - `argv`: argument list (`None` is `sys.argv`)
+
+        - `nocommand`: disable parsing a first argument as `command`
+        """
+        if argv is None:
+            argv = sys.argv
+
+        args,kwargs,flags,values= _getargs(argv if nocommand else argv[1:])
+
         self.argv = argv
-        self.command = argv[0]
-        self.args,self.kwargs,self.flags,self.values = _getargs(argv[1:])
+        """Unparsed argument list"""
+
+        self.command = None if nocommand else argv[0]
+        """First argument in list"""
+
+        self.args = args
+        """Positional arguments, i.e., no leading dash or equal signs."""
+
+        self.kwargs = kwargs
+        """Keyword arguments, i.e., leading double dash, optional equal sign."""
+
+        self.flags = flags
+        """Flag arguments, i.e., leading single dash."""
+
+        self.values = values
+        """Value arguments, i.e., no dash with equal sign."""
 
     def __repr__(self):
         return f"cmdline.CommandLine(argv={repr(self.argv)})"
 
 if __name__ == '__main__':
-    
+
     test = CommandLine(["test","abc","456","78.9","null","true","false",
         "--key1=value1","--key2=123","--key3=45.6","--key4=null","--key5=true","--key5=false",
         "-a","-bcd=123","-123","-123.45","-null","-true","-false",
@@ -118,5 +149,8 @@ if __name__ == '__main__':
     check_eq(test.kwargs,{'key1': 'value1', 'key2': 123, 'key3': 45.6, 'key4': None, 'key5': False}, f"{test.kwargs=} is incorrect")
     check_eq(test.flags,('a', 'bcd=123', 123, 123.45, None, True, False), f"{test.flags=} is incorrect")
     check_eq(test.values,{'value1': 123, 'value2': 45.6, 'value3': 'abc', 'value4': None, 'value5': True, 'value6': False, 'value7': '', 'value8': [123, 45.6, 'def', None, True, False], 'value9': {'int': 123, 'float': 45.6, 'string': 'ghi', 'none': None, 'true': True, 'false': False}}, f"{test.values=} is incorrect")
+
+    test = CommandLine(["a","123","45.6","null","true","false"],nocommand=True)
+    check_eq(test.args,('a',123,45.6,None,True,False))
 
     print(f"CommandLine() tests: {n_errors} errors")
